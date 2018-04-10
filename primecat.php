@@ -12,13 +12,14 @@ Version: 1.0
 Author URI: krisgale.com
 */
 
-function primecat_meta_box_html( ) {
+function primecat_meta_box_html( $post ) {
+    $val = get_post_meta( $post->ID, "primecat_id", TRUE );
     ?>
-    <select name="primecat_select">
+    <select name="primecat_id">
         <option value="">(None)</option>
-    <?php foreach( get_categories( [ 'hide_empty' => FALSE ] ) as $cat ) { ?>
-        <option value="<?php echo $cat->term_id; ?>"><?php echo $cat->name; ?></option>
-    <?php } ?>
+    <?php foreach( get_categories( [ 'hide_empty' => FALSE ] ) as $cat ) { if( $cat->term_id != 1 ) { ?>
+        <option value="<?php echo $cat->term_id; ?>" <?php selected( $val, $cat->term_id ); ?>><?php echo $cat->name; ?></option>
+    <?php } } ?>
     </select>
     <?php
 }
@@ -44,4 +45,25 @@ function primecat_add_meta_box( ) {
     }
 }
 
+function primecat_save_post( $id ) {
+    if( !array_key_exists( "primecat_id", $_POST ) ) {
+        return;
+    }
+    update_post_meta(
+        $id,
+        "primecat_id",
+        $val = $_POST[ 'primecat_id' ]
+    );
+    $cats = [ ];
+    foreach( wp_get_post_categories( $id, [ 'fields' => "ids" ] ) as $cat ) {
+        if( $cat != 1 && $cat != $val ) {
+            $cats[ ] = $cat;
+        }
+    }
+    $cats[ ] = $val;
+    wp_set_post_categories( $id, $cats );
+}
+
 add_action( "add_meta_boxes", "primecat_add_meta_box" );
+
+add_action( "save_post", "primecat_save_post" );
