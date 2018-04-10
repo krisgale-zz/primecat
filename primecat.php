@@ -60,7 +60,9 @@ function primecat_save_post( $id ) {
             $cats[ ] = $cat;
         }
     }
-    $cats[ ] = $val;
+    if( $val ) {
+        $cats[ ] = $val;
+    }
     wp_set_post_categories( $id, $cats );
 }
 
