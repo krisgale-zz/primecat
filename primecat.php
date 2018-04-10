@@ -66,6 +66,64 @@ function primecat_save_post( $id ) {
     wp_set_post_categories( $id, $cats );
 }
 
-add_action( "add_meta_boxes", "primecat_add_meta_box" );
+class primecat_Widget extends WP_Widget {
+    public function __construct( ) {
+        parent::__construct(
+            "primecat_widget",
+            "primecat_Widget",
+            [ 'description' => __( "primecat Widget", "text_domain" ) ]
+        );
+    }
 
+    public function widget( $args, $instance ) {
+        global $wpdb;
+        $cats = [ ];
+        foreach( $wpdb->get_results(
+            "SELECT DISTINCT meta_value FROM " . $wpdb->prefix . "postmeta WHERE meta_key = 'primecat_id'",
+            ARRAY_A
+        ) as $result ) {
+            $cats[ ] = $result[ 'meta_value' ];
+        }
+        $links = "";
+        foreach( get_categories( [ 'hide_empty' => TRUE ] ) as $cat ) {
+            if( in_array( $cat->term_id, $cats ) ) {
+                $link = '<a href="' . get_category_link( $cat ) . '">' . $cat->name . '</a>';
+                $links .= '<li>' . $link . '</li>';
+            }
+        }
+        extract( $args );
+        $title = apply_filters( "widget_title", $instance[ 'title' ] );
+        echo $before_widget
+            . ( $title ? $before_title . $title . $after_title : "" )
+            . ( $links ? '<ul>' . $links . '</ul>' : "" )
+            . $after_widget;
+    }
+
+    public function form( $instance ) {
+        $field_id = $this->get_field_id( "title" );
+        $field_name = $this->get_field_name( "title" );
+        $title = isset( $instance[ 'title' ] )
+            ? $instance[ 'title' ]
+            : __( "New Title", "text_domain" );
+        ?>
+        <label for="<?php echo $field_name; ?>"></label>
+        <input class="widefat" id="<?php echo $field_id; ?>" name="<?php echo $field_name; ?>" value="<?php echo esc_attr( $title ); ?>" type="text">
+        <?php
+    }
+
+    public function update( $new, $old ) {
+        return [
+            'title' => !empty( $new[ 'title' ] )
+                ? strip_tags( $new[ 'title' ] )
+                : ""
+        ];
+    }
+}
+
+function primecat_widgets_init( ) {
+    register_widget( "primecat_Widget" );
+}
+
+add_action( "add_meta_boxes", "primecat_add_meta_box" );
 add_action( "save_post", "primecat_save_post" );
+add_action( 'widgets_init', "primecat_widgets_init" );
